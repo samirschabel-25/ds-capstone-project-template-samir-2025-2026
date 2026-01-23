@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pokémon Scan (Aligned + Similarity)</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 20px; max-width: 720px; }
+    .box { padding: 16px; border: 1px solid #ddd; border-radius: 14px; }
+    button { padding: 10px 14px; border-radius: 10px; border: 1px solid #ccc; cursor: pointer; }
+    img { max-width: 100%; border-radius: 14px; margin-top: 12px; }
+    pre { background: #f6f6f6; padding: 12px; border-radius: 12px; overflow:auto; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    label { font-size: 14px; color: #333; display: grid; gap: 6px; }
+    input, select { padding: 10px; border: 1px solid #ccc; border-radius: 10px; }
+    .muted { color: #666; font-size: 14px; }
+    .actions { display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h2>Pokémon Rückseite Scan (Auto-Align)</h2>
+  <p class="muted">
+    Referenzen: Foto + Label → Save Reference<br>
+    Erkennung: Foto → Predict (vergleicht aligned Embeddings)
+  </p>
+
+  <div class="box">
+    <input id="file" type="file" accept="image/*" capture="environment" />
+
+    <div class="row" style="margin-top:12px;">
+      <label>Label (nur für Referenzen)
+        <select id="label">
+          <option value="">(kein Label – für Predict)</option>
+          <option>NM</option><option>EX</option><option>GD</option>
+          <option>LP</option><option>PL</option><option>PO</option>
+        </select>
+      </label>
+
+      <label>Verified by
+        <input id="verified_by" value="samir" />
+      </label>
+    </div>
+
+    <div class="actions">
+      <button id="saveBtn" disabled>Save Reference</button>
+      <button id="predBtn" disabled>Predict</button>
+      <button id="nextBtn" disabled>Nächstes Foto</button>
+    </div>
+
+    <img id="preview" alt="" />
+    <pre id="out"></pre>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("file");
+    const label = document.getElementById("label");
+    const verifiedBy = document.getElementById("verified_by");
+
+    const saveBtn = document.getElementById("saveBtn");
+    const predBtn = document.getElementById("predBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    const preview = document.getElementById("preview");
+    const out = document.getElementById("out");
+
+    let currentFile = null;
+
+    function resetUI() {
+      currentFile = null;
+      fileInput.value = "";
+      saveBtn.disabled = true;
+      predBtn.disabled = true;
+      nextBtn.disabled = true;
+      preview.removeAttribute("src");
+      out.textContent = "";
+    }
+
+    fileInput.addEventListener("change", () => {
+      currentFile = fileInput.files?.[0] || null;
+      if (!currentFile) return;
+      preview.src = URL.createObjectURL(currentFile);
+      predBtn.disabled = false;
+      saveBtn.disabled = !label.value;
+      nextBtn.disabled = true;
+      out.textContent = "";
+    });
+
+    label.addEventListener("change", () => {
+      if (!currentFile) return;
+      saveBtn.disabled = !label.value;
+    });
+
+    async function postForm(url) {
+      const fd = new FormData();
+      fd.append("file", currentFile);
+      if (label.value) fd.append("label", label.value);
+      fd.append("verified_by", verifiedBy.value || "user");
+
+      out.textContent = "Working...";
+      const res = await fetch(url, { method: "POST", body: fd });
+      const data = await res.json();
+      out.textContent = JSON.stringify(data, null, 2);
+      nextBtn.disabled = false;
+    }
+
+    saveBtn.addEventListener("click", async () => {
+      if (!currentFile || !label.value) return;
+      saveBtn.disabled = true;
+      await postForm("/upload_reference");
+      saveBtn.disabled = false;
+    });
+
+    predBtn.addEventListener("click", async () => {
+      if (!currentFile) return;
+      predBtn.disabled = true;
+      await postForm("/predict");
+      predBtn.disabled = false;
+    });
+
+    nextBtn.addEventListener("click", () => {
+      resetUI();
+      fileInput.click();
+    });
+  </script>
+</body>
+</html>
