@@ -1,4 +1,4 @@
-#!/Users/samirnadine/Desktop/Projekte/TCG_Card_Condition_Scanner/ds-capstone-project-template-samir-2025-2026/.venv310/bin/python3.10
+#!/Users/samirnadine/Desktop/Projekte/TCG_Card_Condition_Scanner/ds-capstone-project-template-samir-2025-2026/.venv310/bin/python
 import sys
 from tensorflow.lite.toco.python.toco_from_protos import main
 if __name__ == '__main__':
